@@ -1,28 +1,33 @@
+// import necessary libraries
 const express = require('express')
 const axios = require('axios')
 const cron = require('node-cron')
 const MongoClient = require('mongodb').MongoClient
-
 const app = express()
+
+// Launch server 
 app.listen(8000, (console.log('listening on port 8000')))
 app.use(express.json())
 
 
+// Connect to database 
 const url = 'mongodb://localhost:27017'
 const dbName = 'studyCase'
-
+let db = null
 MongoClient.connect(url)
-    .then (client => {
+    .then(client => {
         console.log("Connected successfully to server")
         db = client.db(dbName)
     })
     .catch(error => console.log(error))
-    
+
+// Remote api variables     
 let access_token = 'a1b2c3d4-a1b2-a1b2-a1b2-a1b2c3d4e5f6'
 let base_url = 'https://api.mercedes-benz.com/experimental/connectedvehicle_tryout/v2/vehicles/'
 let vehicle_id = '1234567890ABCD1234'
 
-// Get vehicule data 
+
+// Get vehicule data (static)
 axios.get(`${base_url}${vehicle_id}`, {
     headers: {
         Authorization: 'Bearer ' + access_token
@@ -51,8 +56,8 @@ cron.schedule('* * * * *', ()=>{
         fuel_data     : null, 
         charge_data   : null
     }
-    
-    
+
+
     // Get Tire States data 
     axios.get(`${base_url}${vehicle_id}/tires`, {
         headers: {
@@ -67,9 +72,9 @@ cron.schedule('* * * * *', ()=>{
         } )  
     }).catch(error => {
         console.log(error)
-         
+
     })
-    
+
     // Get doors data 
     axios.get(`${base_url}${vehicle_id}/doors`, {
         headers: {
@@ -84,9 +89,9 @@ cron.schedule('* * * * *', ()=>{
         } )  
     }).catch(error => {
         console.log(error)
-         
+
     })
-    
+
     // Get location data 
     axios.get(`${base_url}${vehicle_id}/location`, {
         headers: {
@@ -101,9 +106,9 @@ cron.schedule('* * * * *', ()=>{
         } )  
     }).catch(error => {
         console.log(error)
-         
+
     })
-    
+
     // Get odometer data
     axios.get(`${base_url}${vehicle_id}/odometer`, {
         headers: {
@@ -118,9 +123,9 @@ cron.schedule('* * * * *', ()=>{
         } )  
     }).catch(error => {
         console.log(error)
-         
+
     })
-    
+
     // Get fuel data 
     axios.get(`${base_url}${vehicle_id}/fuel`, {
         headers: {
@@ -135,9 +140,9 @@ cron.schedule('* * * * *', ()=>{
         } )  
     }).catch(error => {
         console.log(error)
-         
+
     })
-    
+
     // Get charge data 
     axios.get(`${base_url}${vehicle_id}/stateofcharge`, {
         headers: {
@@ -152,9 +157,9 @@ cron.schedule('* * * * *', ()=>{
         } )   
     }).catch(error => {
         console.log(error)
-         
+
     })
-       
+
     setTimeout(() => {
         console.log(dynamic_data)
         const vehicleDataCollection = db.collection(`${vehicle_id}`)
@@ -167,7 +172,7 @@ app.post(`/${vehicle_id}/doors/change`, (req, res) => {
     // Validate request
     if(!req.body.command) {
         return res.status(400).send({
-            message: "Note content can not be empty"
+            message: "Body can not be empty !"
         });
     }
 
@@ -189,12 +194,56 @@ app.post(`/${vehicle_id}/doors/change`, (req, res) => {
         }
     ).then(response => {
         return res.status(200).send({
-            message: "Status updated"
+            message: "Status updated !"
         });
     })
     .catch(error => {
         console.log(error)
-         
+
     })
 })
 
+// Get last n values of charge
+app.get(`/${vehicle_id}/charge/:n`, (req, res) => {
+
+    async function data() {
+        let result = []
+        let n = parseInt(req.params['n'])
+
+        const vehicleDataCollection = db.collection(`${vehicle_id}`)
+        const cursor = vehicleDataCollection.find().sort({ '_id': -1 }).limit(n)
+        // print a message if no documents were found
+        if ((await cursor.count()) === 0) {
+            console.log("No documents found!");
+        }
+        // replace console.dir with your callback to access individual elements
+        await cursor.forEach(doc=> result.push(doc['charge_data']));
+        console.log(result)
+        res.json(result)
+    }
+    data()
+
+
+})
+// Get last n values of fuel
+app.get(`/${vehicle_id}/fuel/:n`, (req, res) => {
+
+    async function data() {
+        let result = []
+        let n = parseInt(req.params['n'])
+
+        const vehicleDataCollection = db.collection(`${vehicle_id}`)
+        const cursor = vehicleDataCollection.find().sort({ '_id': -1 }).limit(n)
+        // print a message if no documents were found
+        if ((await cursor.count()) === 0) {
+            console.log("No documents found!");
+        }
+        // replace console.dir with your callback to access individual elements
+        await cursor.forEach(doc=> result.push(doc['fuel_data']));
+        console.log(result)
+        res.json(result)
+    }
+    data()
+
+
+})
