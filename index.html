@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title> Connected Vehicle </title>
+    <!-- Import VueJs -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <!-- Import Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- Import Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4"
+        crossorigin="anonymous"></script>
+    <!-- Import OpenStreetMap -->
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+    <link href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" rel="stylesheet"/>
+
+</head>
+
+<body>
+    <div id="app" class="container">
+        <!-- Vehicle ID input -->
+        <div v-if="data_view==false" class="row text-white">
+            <div class="col-xl-5 col-lg-6 col-md-8 col-sm-10 mx-auto text-center form p-4">
+                <div class="px-2">
+                    <form action="" class="justify-content-center">
+                        <div class="form-group">
+                            <input type="text" class="form-control" v-model="vehicle_id" placeholder="Vehicle ID">
+                        </div>
+                        <br>
+                        <button v-on:click="getdata()" type="submit" class="btn btn-primary btn-lg">Launch</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle DATA -->
+        <div v-else>
+            <div>   
+                <div class="card-group  mt-4 ">
+                    <!-- Vehicle Identity Information Card -->
+                    <div class="card text-center border-dark" >
+                        <div class="card-header">
+                            Vehicle Inforamtions
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered" >
+                                <tr>
+                                    <th>
+                                        Information
+                                    </th>
+                                    <th>
+                                        Value
+                                    </th>
+                                </tr>
+                                <tr >
+                                    <td><strong>ID</strong></td>
+                                    <td>{{vehicle_id}}</td>
+                                </tr>
+                                <tr >
+                                    <td><strong>License plate</strong></td>
+                                    <td>{{vehicle_plate}}</td>
+                                </tr>
+                                <tr >
+                                    <td><strong>FIN or VIN</strong></td>
+                                    <td>{{vehicle_finorvin}}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Vehicle State Data Card -->
+                    <div class="card text-center border-dark">
+                        <div class="card-header">
+                            Vehicle State
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered" >
+                                <tr>
+                                    <th>
+                                        Information
+                                    </th>
+                                    <th>
+                                        Value
+                                    </th>
+                                </tr>
+                                <tr >
+                                    <td><strong>Odometer</strong></td>
+                                    <td>{{odometer_data }} Km</td>
+                                </tr>
+                                <tr :class="fuelOk" >
+                                    <td><strong>Fuel </strong></td>
+                                    <td >{{fuel_data}} % </td>
+                                </tr>
+                                <tr  :class="chargeOk" >
+                                    <td><strong>Charge </strong></td>
+                                    <td >{{charge_data}} % </td>
+                                </tr>                          
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <br> 
+                
+                <!-- Vehicle Doors State Card -->
+                <div class="card text-center border-dark">
+                    <div class="card-header">
+                        Doors
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered" >  
+                            <tr>
+                                <th>
+                                    Door
+                                </th>
+                                <th>
+                                    State
+                                </th>
+                            </tr>
+                            <tr v-for="(state, door)  in doors_data">
+                                <td><strong>{{ door | formatDoor }}</strong></td>
+                                <td >{{state['value']}}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <br>
+
+                <!-- Vehicle Tires State Card -->
+                <div class="card text-center border-dark">
+                    <div class="card-header">
+                        Tires
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered" >
+                            <tr>
+                                <th>
+                                    Tire
+                                </th>
+                                <th>
+                                    Pressure
+                                </th>
+                            </tr>
+                            <tr v-for="(value, tire)  in tires_data">
+                                <td><strong>{{ tire | formatTire}}</strong></td>
+                                <td>{{value['value']}} KPa </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <br>
+             <!-- The map layout-->
+            <div class="card text-center  border-dark">
+                <div class="card-header">
+                    Location
+                </div>
+                <div class="card-body">
+                    <div id="map" style="height: 250px;"></div>
+                </div>
+            </div>
+            <br>
+        </div>
+    </div>
+</body>
+
+</html>
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                data_view: false,
+                vehicle_id: '',
+                vehicle_finorvin: null,
+                vehicle_plate:null,
+                tires_data: null,
+                doors_data: null,
+                location: null,
+                odometer_data: null,
+                fuel_data: null,
+                charge_data: null
+
+            }
+        },
+        methods: {
+            getdata: function () {
+                // Since we 
+                if (this.vehicle_id == "1234567890ABCD1234") {
+                    this.data_view = true
+                    // Get general data about the car 
+                    axios.get(`http://localhost:8000/${this.vehicle_id}/details`)
+                        .then(response => { this.vehicle_finorvin = response.data['finorvin']
+                                            this.vehicle_plate    = response.data['licenseplate']
+                                            console.log(response.data) 
+                                        })
+                    // Get Tires
+                    axios.get(`http://localhost:8000/${this.vehicle_id}/tires`)
+                        .then(response => { this.tires_data = response.data })
+                    // Get Doors
+                    axios.get(`http://localhost:8000/${this.vehicle_id}/doors`)
+                        .then(response => { this.doors_data = response.data })
+                    // Get Location
+                    axios.get(`http://localhost:8000/${this.vehicle_id}/location`)
+                        .then(response => { 
+                                            this.location = response.data 
+                                            this.getmap(response.data['longitude']['value'], response.data['latitude']['value'])
+                                            
+                                        })
+                    // Get Odometer 
+                    axios.get(`http://localhost:8000/${this.vehicle_id}/odometer`)
+                        .then(response => { this.odometer_data = response.data['odometer']['value'] })
+                    // Get Fuel
+                    axios.get(`http://localhost:8000/${this.vehicle_id}/fuel`)
+                        .then(response => { this.fuel_data = response.data['fuellevelpercent']['value'] })
+                    // Get Charge
+                    axios.get(`http://localhost:8000/${this.vehicle_id}/stateofcharge`)
+                        .then(response => { this.charge_data = response.data['stateofcharge']['value'] })
+
+                }
+            },
+            getmap: function(lon, lat) {
+                var element = document.getElementById('map')
+                element.style = 'height:300px;'
+                // Create Leaflet map on map element.
+                var map = L.map(element)
+                // Add OSM tile layer to the Leaflet map.
+                L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map)
+                // Target's GPS coordinates.
+                var target = L.latLng(lat, lon)
+                // Set map's center to target with zoom 30.
+                map.setView(target, 30);
+                // Place a marker on the same location.
+                L.marker(target).addTo(map);
+                
+            
+
+            }
+        },
+        filters :{
+            formatTire: function(value) {
+                if (value) {
+                    value = value.replace('tirepressure', '')
+                    switch (value.includes('front') ) {
+                        case true : return( value.replace('front','Front '));
+                        case false : return( value.replace('rear','Rear  '));
+
+                    }
+            
+                }
+            }, 
+            formatDoor: function(value) {
+                if (value){
+                    value = value.replace('door', '')
+                    switch (value.includes('lock') ) {
+                        case true : return( value.replace('lock','Lock ')).replace('status', 'status ').replace('front','front ').replace('rear','rear  ');
+                        case false : return( value.replace('status','Status ').replace('front',' front ').replace('rear',' rear  '));
+                    }
+                }
+            }
+        }, 
+        computed : {
+            fuelOk : function() {
+                switch ( true ) {
+                        case (this.fuel_data < 20)  : return( 'table-danger');
+                        case (this.fuel_data < 50)  : return( 'table-warning');
+                        case (this.fuel_data < 100) : return( 'table-success');
+                    }   
+            },
+            chargeOk : function() {
+                switch ( true ) {
+                        case (this.charge_data < 20)  : return( 'table-danger');
+                        case (this.charge_data < 50)  : return( 'table-warning');
+                        case (this.charge_data < 100) : return( 'table-success');
+                    }
+            }
+        }
+
+    })
+
+</script>
