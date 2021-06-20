@@ -3,12 +3,15 @@ const express = require('express')
 const axios = require('axios')
 const cron = require('node-cron')
 const MongoClient = require('mongodb').MongoClient
+var cors = require('cors');
+
+// Set app 
 const app = express()
+app.use(cors());
 
 // Launch server 
 app.listen(8000, (console.log('listening on port 8000')))
 app.use(express.json())
-
 
 // Connect to database 
 const url = 'mongodb://localhost:27017'
@@ -22,9 +25,9 @@ MongoClient.connect(url)
     .catch(error => console.log(error))
 
 // Remote api variables     
-let access_token = 'a1b2c3d4-a1b2-a1b2-a1b2-a1b2c3d4e5f6'
+let access_token = 'a1b2c3d4-a1b2-a1b2-a1b2-a1b2c3d4e5f6' // I use the tryout api 
 let base_url = 'https://api.mercedes-benz.com/experimental/connectedvehicle_tryout/v2/vehicles/'
-let vehicle_id = '1234567890ABCD1234'
+let vehicle_id = '1234567890ABCD1234' 
 
 
 // Get vehicule data (static)
@@ -203,7 +206,7 @@ app.post(`/${vehicle_id}/doors/change`, (req, res) => {
     })
 })
 
-// Get last n values of charge
+// Get last n values of charge from MongoDB
 app.get(`/${vehicle_id}/charge/:n`, (req, res) => {
 
     async function data() {
@@ -212,20 +215,18 @@ app.get(`/${vehicle_id}/charge/:n`, (req, res) => {
 
         const vehicleDataCollection = db.collection(`${vehicle_id}`)
         const cursor = vehicleDataCollection.find().sort({ '_id': -1 }).limit(n)
-        // print a message if no documents were found
         if ((await cursor.count()) === 0) {
             console.log("No documents found!");
         }
-        // replace console.dir with your callback to access individual elements
         await cursor.forEach(doc=> result.push(doc['charge_data']));
         console.log(result)
         res.json(result)
     }
     data()
 
-
 })
-// Get last n values of fuel
+
+// Get last n values of fuel from MOngoDB
 app.get(`/${vehicle_id}/fuel/:n`, (req, res) => {
 
     async function data() {
@@ -234,11 +235,9 @@ app.get(`/${vehicle_id}/fuel/:n`, (req, res) => {
 
         const vehicleDataCollection = db.collection(`${vehicle_id}`)
         const cursor = vehicleDataCollection.find().sort({ '_id': -1 }).limit(n)
-        // print a message if no documents were found
         if ((await cursor.count()) === 0) {
             console.log("No documents found!");
         }
-        // replace console.dir with your callback to access individual elements
         await cursor.forEach(doc=> result.push(doc['fuel_data']));
         console.log(result)
         res.json(result)
