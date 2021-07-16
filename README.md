@@ -1,4 +1,4 @@
-## AiSight Study case :
+## About
 This is a basic web application which interacts with Mercedes Connected Vehicle Experimental API.
 
 ### Manual setup 
